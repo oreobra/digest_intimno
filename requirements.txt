@@ -1,0 +1,11 @@
+python-telegram-bot==21.4
+APScheduler==3.10.4
+feedparser==6.0.11
+trafilatura==1.12.2
+beautifulsoup4==4.12.3
+requests==2.32.3
+python-dotenv==1.0.1
+rapidfuzz==3.9.6
+pytz==2024.1
+PyYAML==6.0.2
+telegraph==1.4.1
