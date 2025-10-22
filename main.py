@@ -1,6 +1,6 @@
 # main.py — TG-каналы (Telethon) + OpenRouter gpt-4o-mini
 # компактные новости в ТГ и длинная статья в Telegraph (inline-ссылки)
-# ИЗМЕНЕНИЯ: ссылки теперь внутри строк в Telegram, в Telegram-посте НЕТ вступлений/лидов
+# ИЗМЕНЕНИЯ: ссылки внутри строк в Telegram; в Telegram-посте НЕТ вступлений/лидов; заголовок: «Модный Дайджест»
 
 import os
 import re
@@ -33,7 +33,7 @@ from telethon.errors import ChannelPrivateError, ChatAdminRequiredError
 load_dotenv()
 
 # ---------- Базовая настройка ----------
-TZ = os.environ.get("TZ", "Europe/Amsterdam")
+TZ = os.environ.get("TZ", "Europe/Moscow")
 WEEKDAY = int(os.environ.get("WEEKDAY", 0))       # 0 — вс
 POST_HOUR = int(os.environ.get("POST_HOUR", 9))
 POST_MINUTE = int(os.environ.get("POST_MINUTE", 0))
@@ -43,6 +43,9 @@ LANG_PREF = os.environ.get("LANG_PREF", "ru")
 
 BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 CHANNEL_ID = os.environ.get("TELEGRAM_CHANNEL_ID")
+
+# Заголовок поста в Telegram
+POST_TITLE = os.environ.get("POST_TITLE", "Модный Дайджест")
 
 # OpenRouter
 OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY")
@@ -310,8 +313,7 @@ def summarize_line(title: str, text: str, lang_pref: str = "ru") -> str:
             {"role": "system", "content":
              safer_tone_prompt(lang_pref) +
              " Верни ОДНУ живую строку-новость (≈12–20 слов), как в модном журнале. "
-             "Без буллетов, кавычек, эмодзи и источников. "
-             "Не повторяй заголовок. Настоящее время."},
+             "Без буллетов, кавычек, эмодзи и источников. Не повторяй заголовок. Настоящее время."},
             {"role": "user",
                 "content": f"Заголовок: {clean_title(title)}\nТекст: {scrub_for_policy(blob)[:1200]}"},
         ], temperature=0.5).strip()
@@ -497,7 +499,7 @@ def pick_emoji(title: str, text: str) -> str:
     blob = f"{title}\n{text}".lower()
     if any(k in blob for k in ["runway", "показ", "fashion week", "подиум", "неделя моды"]):
         return "👗"
-    if any(k in blob for k in ["коллекц", "collection", "капсул", "капсула", "lookbook", "лукбук", "drop", "дроп"]):
+    if any(k in blob for k in ["коллекц", "collection", "капсула", "lookbook", "лукбук", "drop", "дроп"]):
         return "🧵"
     if any(k in blob for k in ["ретейл", "магазин", "retail", "маркет", "продаж"]):
         return "🛍️"
@@ -696,7 +698,7 @@ def render_message(items, digest_url: str | None = None):
         return random.choice(IRONIC_FALLBACKS)
 
     # ТОЛЬКО заголовок + пункты. Никаких вступлений/«лидов».
-    title = "Еженедельный модный дайджест"
+    title = POST_TITLE
     lines = [f"*{title}*"]
 
     # Список новостей с умными ссылками
@@ -722,8 +724,7 @@ async def post_digest(bot):
     await send_typing(bot, CHANNEL_ID)
     try:
         items = await build_digest()
-        digest_url = create_digest_page(
-            "Еженедельный модный дайджест", items) if items else None
+        digest_url = create_digest_page(POST_TITLE, items) if items else None
         text = render_message(items, digest_url)
         await bot.send_message(
             chat_id=CHANNEL_ID,
@@ -748,7 +749,7 @@ async def cmd_preview(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         items = await build_digest()
         digest_url = create_digest_page(
-            "Еженедельный модный дайджест (черновик)", items) if items else None
+            f"{POST_TITLE} (черновик)", items) if items else None
         text = render_message(items, digest_url)
         await update.message.reply_text(text, parse_mode=ParseMode.MARKDOWN, disable_web_page_preview=False)
     except Exception as e:
@@ -771,7 +772,7 @@ async def on_start(app: Application):
 async def preview_console():
     items = await build_digest()
     digest_url = create_digest_page(
-        "Еженедельный модный дайджест (консоль)", items) if items else None
+        f"{POST_TITLE} (консоль)", items) if items else None
     print(render_message(items, digest_url))
 
 
