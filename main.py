@@ -15,8 +15,7 @@ from datetime import datetime, timedelta, timezone
 from urllib.parse import urlparse
 
 import requests
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from apscheduler.triggers.cron import CronTrigger
+# Планировщик убран: запуск по CRON снаружи (Beget)
 from rapidfuzz import fuzz
 from dotenv import load_dotenv
 
@@ -756,15 +755,8 @@ async def cmd_preview(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"⚠️ Ошибка превью: {e}")
 
 
-# ---------- Планировщик ----------
-async def on_start(app: Application):
-    scheduler = AsyncIOScheduler(timezone=TZ)
-    trigger = CronTrigger(day_of_week=WEEKDAY,
-                          hour=POST_HOUR, minute=POST_MINUTE)
-    scheduler.add_job(post_digest, trigger, args=[app.bot], id="weekly_digest")
-    scheduler.start()
-    logger.info(
-        f"Планировщик: WEEKDAY={WEEKDAY} {POST_HOUR}:{POST_MINUTE} ({TZ})")
+# ---------- Планировщик отключён (CRON снаружи) ----------
+# Запуск выполняется внешним CRON: POST_ONCE=1 python3 main.py
 
 
 # ---------- Режимы запуска ----------
@@ -800,22 +792,8 @@ def main():
         asyncio.run(post_once())
         return
 
-    if not BOT_TOKEN:
-        raise RuntimeError("TELEGRAM_BOT_TOKEN не задан")
-    if not CHANNEL_ID:
-        raise RuntimeError("TELEGRAM_CHANNEL_ID не задан")
-    if not (TG_API_ID and TG_API_HASH and TG_STRING_SESSION):
-        logger.warning(
-            "Нет TELEGRAM_API_ID/API_HASH/STRING_SESSION — сбор из TG отключён.")
-
-    request = HTTPXRequest(
-        connect_timeout=30.0, read_timeout=30.0, write_timeout=30.0, pool_timeout=30.0)
-    app = Application.builder().token(BOT_TOKEN).request(request).build()
-    app.add_handler(CommandHandler("start", cmd_start))
-    app.add_handler(CommandHandler("preview", cmd_preview))
-    app.post_init = on_start
-    logger.info("Бот запускается…")
-    app.run_polling(close_loop=False)
+    # Режим постоянного polling отключён. Используйте CRON с POST_ONCE=1.
+    print("CRON-режим: установите POST_ONCE=1 для публикации, PREVIEW_CONSOLE=1 для предпросмотра.")
 
 
 if __name__ == "__main__":
